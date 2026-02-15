@@ -4,7 +4,7 @@ icon: fas fa-info-circle
 order: 4
 ---
 
-## About Me
+## Don't worry... I can also debug you
 
 I'm a **Red Teamer** and **Low-Level Developer**.
 
@@ -22,8 +22,6 @@ My Red Team Notes: [Notion - Red Team Notes](https://www.notion.so/Red-Team-Note
 - **eWPTX** (Web Application Penetration Tester eXtreme)
 - **eMAPT** (Mobile Application Penetration Tester)
 
-Don't worry... I can also debug you.
-
 ## The Goal is Pwn2Own
 
 ![Pwn2Own](/assets/img/pwn2own.avif)
@@ -33,3 +31,5 @@ Don't worry... I can also debug you.
 - X: [@0XDbgMan](https://x.com/0XDbgMan)
 - LinkedIn: [aboud-y](https://www.linkedin.com/in/aboud-y)
 - GitHub: [0xDbgMan](https://github.com/0xDbgMan)
+- Discord: **0xDbgman**
+- Telegram: **dbgman**
