@@ -16,7 +16,7 @@ timezone:
 
 title: DbgMan # the main title
 
-tagline: The Debugger # it will display as the subtitle
+tagline: Red Teamer & Low-Level Developer # it will display as the subtitle
 
 description: >- # used by seo meta and the atom feed
   Red Teamer & Low-Level Developer. Deep dives into Windows Internals, Kernel Exploitation, Driver Analysis, and Red Team techniques.
