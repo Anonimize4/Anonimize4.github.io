@@ -18,6 +18,7 @@
 
 - type: email
   icon: "fas fa-envelope"
+  url: "mailto:samuelbelay81@gmail.com"
   noblank: true # open link in current tab
 
 - type: rss
