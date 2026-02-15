@@ -2,9 +2,19 @@
 
 - type: github
   icon: "fab fa-github"
+  url: "https://github.com/Anonimize4"
 
-- type: twitter
-  icon: "fa-brands fa-x-twitter"
+- type: discord
+  icon: "fab fa-discord"
+  url: "https://discord.com/channels/@me"
+
+- type: tryhackme
+  icon: "fas fa-user-shield"
+  url: "https://tryhackme.com/dashboard"
+
+- type: hackthebox
+  icon: "fas fa-cube"
+  url: "https://account.hackthebox.com/dashboard"
 
 - type: email
   icon: "fas fa-envelope"
