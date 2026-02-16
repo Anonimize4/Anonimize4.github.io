@@ -1,6 +1,6 @@
 ---
 title: "Red Team Infrastructure The Full Picture: From Domain to Beacon"
-date: 2025-12-01 00:00:00 +0200
+date: 2026-02-17 00:00:00 +0200
 categories: [Red Team, Red Team Infrastructure]
 tags: [red-team, c2, redirector, cobalt-strike, sliver, infrastructure, cdn, aws, azure, gcp, opsec, terraform, phishing, cloudflare, malleable-profiles]
 description: "The complete guide to Red Team Infrastructure: C2 Frameworks, Redirectors, CDN Relays (Azure, AWS, GCP), Serverless Lambda, Cloudflare Tunnels, Phishing Infrastructure, Mail Servers, Malleable Profiles, and full OPSEC hardening."
