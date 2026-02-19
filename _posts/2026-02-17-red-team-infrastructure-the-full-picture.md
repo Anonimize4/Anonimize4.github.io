@@ -158,6 +158,31 @@ dig yourdomain.com
 
 > **OPSEC Tip:** Use [Ghostwriter](https://www.ghostwriter.wiki/features/infrastructure-management/domains-management/monitoring-domains) to manage and monitor your red team domains across engagements.
 
+How to Test :
+```bash
+# Check domain reputation and category across major security vendors using DomainHunter
+python domainhunter.py -r 100 -c Healthcare
+
+# Verify DNS records are correctly propagated after configuring A and CNAME records
+dig yourdomain.com A && dig TXT yourdomain.com
+
+# Use this site to verify domain categorization across Bluecoat and major security vendors
+https://sitereview.bluecoat.com/
+
+# Use this site to check domain blacklist status across all major threat intel feeds
+https://mxtoolbox.com/domain
+
+# Scenario 1: Verifying an expired domain is clean before purchasing it for an engagement
+1- Run DomainHunter against expireddomains.net to find domains matching your desired category (e.g., Healthcare)
+2- For each candidate, check all major vendor categories: McAfee, Fortiguard, Symantec, Checkpoint, and Palo Alto using the tool's built-in checks
+3- Reject any domain with a single flag from any vendor; repeat the search until a fully clean, well-categorized domain is confirmed
+
+# Scenario 2: Recategorizing a newly purchased domain before the engagement starts
+1- Deploy a simple, legitimate-looking website on the domain with real content matching the target category (e.g., a health tips blog with articles)
+2- Submit the domain for recategorization at sitereview.bluecoat.com, zvelo.com, and trustedsource.org
+3- Wait 48-72 hours, then re-verify the category using VirusTotal and vendor portals before the engagement date
+```
+
 ## Phase 2: Infrastructure Deployment with Terraform
 
 Manual setup is slow, error-prone, and unrepeatable. Terraform automates everything servers, networks, security groups, DNS in minutes.
@@ -191,6 +216,31 @@ A typical deployment creates:
 
 All servers sit on the **same internal subnet** (e.g., 10.10.0.0/24). The only server exposed to the internet is the **redirector**. The team server communicates only through the internal network.
 
+How to Test :
+```bash
+# Validate Terraform configuration and preview all infrastructure changes before applying
+terraform plan -var-file="vars.tfvars"
+
+# Verify internal connectivity between the redirector and the team server after deployment
+ssh -i key.pem user@REDIRECTOR_IP "curl -sk https://10.10.0.204:4443"
+
+# Use the Terraform documentation and provider reference for configuration guidance
+https://developer.hashicorp.com/terraform/docs
+
+# Use Shodan to verify the team server has no public-facing ports after deployment
+https://www.shodan.io/
+
+# Scenario 1: Team server is accidentally exposed to the internet after deployment
+1- Run nmap -sV -p- TEAM_SERVER_IP from an external perspective to check for exposed ports
+2- If any ports are listening publicly, update the Terraform security group rules to block all inbound traffic except from the redirector's internal IP
+3- Re-apply the Terraform plan, confirm the team server is no longer reachable externally, and verify the redirector can still reach it internally
+
+# Scenario 2: Redirector cannot communicate with the team server after deployment
+1- SSH into the redirector and test the connection: curl -sk https://10.10.0.204:4443 to check if the team server responds
+2- If the connection fails, inspect the VPC security group rules on the team server to confirm port 4443 is allowed from the redirector's internal subnet
+3- Fix the security group rules, re-apply Terraform, and re-run the connectivity test to confirm the internal channel is working
+```
+
 ## Phase 3: Command & Control (C2) Framework
 
 The C2 framework is the heart of your operation. It generates implants (beacons), manages listeners, and provides the operator interface.
@@ -222,6 +272,31 @@ The C2 framework is the heart of your operation. It generates implants (beacons)
 
 ```
 Internet ← HTTPS Beacon (Egress) ← SMB Beacon (P2P) ← TCP Beacon (P2P)
+```
+
+How to Test :
+```bash
+# Verify the C2 listener is active and listening on the expected port on the team server
+netstat -tlnp | grep 4443
+
+# Generate a test beacon and confirm it calls back through the team server listener
+curl -sk -A "Mozilla/5.0" https://TEAM_SERVER_IP:4443/
+
+# Use the C2 Matrix to compare framework capabilities and choose the right C2 for the engagement
+https://www.thec2matrix.com/
+
+# Use Havoc C2 documentation for framework setup and agent configuration reference
+https://havoc.wiki/
+
+# Scenario 1: Verifying a new C2 listener is functional before deploying beacons to production
+1- Start the HTTPS listener on the team server and confirm the port is listening using netstat -tlnp
+2- Generate a staged beacon payload, execute it on an isolated test VM, and wait for it to call back
+3- Confirm the beacon appears in the operator interface, responds to commands, and shell output is returned correctly
+
+# Scenario 2: Beacon fails to connect after placing the redirector in front of the team server
+1- Check if the beacon's callback URL points to the redirector domain rather than the raw team server IP
+2- Manually test the redirect chain: curl -sk -A "Mozilla/5.0" -H "DNT: 1" https://yourdomain.com/css3/index2.shtml
+3- Verify the Malleable profile's Host header matches the redirector domain, redeploy the beacon, and confirm check-in succeeds
 ```
 
 ## Phase 4: The HTTPS Redirector
@@ -350,6 +425,31 @@ ProxyPassReverse / https://10.10.0.204:4443/
 ```
 
 At this point, **all traffic** hitting your domain reaches the team server. That's dangerous. We need to filter.
+
+How to Test :
+```bash
+# Verify the redirector is forwarding C2 traffic and the team server responds correctly
+curl -sk -A "Mozilla/5.0" -H "DNT: 1" https://yourdomain.com/css3/index2.shtml
+
+# Confirm the Server header is masquerading as IIS and not revealing Apache
+curl -sI https://yourdomain.com | grep -i server
+
+# Use SSL Labs to verify the TLS certificate chain and configuration on the redirector
+https://www.ssllabs.com/ssltest/
+
+# Use Shodan to confirm the redirector does not reveal internal infrastructure details
+https://www.shodan.io/
+
+# Scenario 1: Validating the ProxyPass configuration correctly forwards C2 beacon traffic
+1- Start the Cobalt Strike listener on the team server and confirm it is accepting connections on port 4443
+2- Configure Apache ProxyPass to forward all requests to https://10.10.0.204:4443 and restart Apache
+3- Generate a test beacon, execute it on a VM, and confirm it checks in via the redirector domain in the team server's beacon log
+
+# Scenario 2: Verifying the redirector continues serving the decoy while the team server is restarted
+1- Take the team server offline temporarily to simulate a planned restart or unplanned failure
+2- While the team server is offline, send HTTP requests to the redirector domain and confirm they receive a normal decoy page response
+3- Bring the team server back online and verify beacons automatically resume check-ins without any redirector reconfiguration needed
+```
 
 ## Phase 5: Fortifying the Redirector
 
@@ -495,6 +595,31 @@ curl -A "Mozilla/5.0" -H "DNT: 1" https://yourdomain.com/
 curl -A "Mozilla/5.0" -H "DNT: 1" https://yourdomain.com/css3/index2.shtml
 ```
 
+How to Test :
+```bash
+# Test all 4 filter layers sequentially to confirm each one correctly rejects unauthorized traffic
+curl -A "Googlebot" https://yourdomain.com/ -sI | grep -i location
+
+# Verify that only exact C2 URI paths are forwarded and all other paths are silently redirected
+curl -A "Mozilla/5.0" -H "DNT: 1" https://yourdomain.com/invalid-random-path -sI | grep -i location
+
+# Use this resource for a comprehensive IP blocklist to include in redirect.rules
+https://gist.github.com/curi0usJack/971385e8334e189d93a6cb4671238b10
+
+# Use AbuseIPDB to check if your redirector IP has been flagged by scanners or threat intel providers
+https://www.abuseipdb.com/
+
+# Scenario 1: Verifying all 4 filter layers reject unauthorized traffic silently without revealing the backend
+1- Test Layer 1 by sending a request with a blocked user agent (Googlebot) and confirm it redirects to the decoy without a 403
+2- Test Layer 2 without the custom DNT header, Layer 3 with an incorrect URI, and Layer 4 from a known scanner IP range
+3- Confirm that all four rejection scenarios result in a silent 302 redirect to the decoy with no indication of a C2 backend
+
+# Scenario 2: A threat intelligence provider discovers the redirector during an active engagement
+1- Review the redirector's access log to identify the provider's IP address that scanned the domain
+2- Add the provider's full IP range to the Layer 4 blocklist in redirect.rules and reload Apache
+3- Confirm the provider's IP is now silently redirected while legitimate beacon traffic continues to flow to the team server uninterrupted
+```
+
 ## Phase 6: CDN Relays
 
 ![CDN Relay Architecture](/assets/img/red-team-infra/cdn-relay-architecture.png)
@@ -637,6 +762,31 @@ Beacon → yourdomain.com (GCP CDN + Google Cert) → Redirector → Team Server
 | Geo-filtering | Yes | Yes | Yes | Via firewall rules |
 | Header filtering | Rules Engine | Rules Engine | Origin headers | Via backend |
 | Best for | Blending into MS traffic | Advanced routing | AWS environments | GCP environments |
+
+How to Test :
+```bash
+# Verify C2 beacon traffic passes through the Azure CDN relay and reaches the team server
+curl -sk -A "Mozilla/5.0" -H "DNT: 1" https://yourname.azureedge.net/css3/index2.shtml
+
+# Confirm the CDN response headers show Microsoft or Amazon origin servers indicating traffic is routed correctly
+curl -sI https://yourname.azureedge.net | grep -i "x-cache\|via\|server"
+
+# Use the Azure portal to monitor CDN traffic, validate caching rules, and review the Rules Engine configuration
+https://portal.azure.com/
+
+# Use CDN Planet to test CDN response headers and verify geo-filtering behavior from multiple global locations
+https://www.cdnplanet.com/tools/cdnperf/
+
+# Scenario 1: Validating the Azure CDN endpoint correctly proxies beacon traffic without caching responses
+1- Deploy the Azure CDN endpoint pointing to your redirector domain and generate a test beacon using the CDN hostname
+2- Execute the beacon on a test VM and monitor both the CDN access logs and the redirector's access.log for incoming requests
+3- Confirm every beacon check-in shows a fresh uncached response and all traffic originates from Azure IP ranges in the redirector log
+
+# Scenario 2: CDN caches a beacon response breaking subsequent C2 check-ins
+1- Execute the beacon and observe that the first check-in succeeds but the second returns the same cached response, breaking communication
+2- Inspect the CDN caching rules and the Malleable profile's server block to confirm Cache-Control: no-store is missing
+3- Add no-store and no-cache headers to the C2 profile's server block, update the CDN rules to bypass cache, and confirm each subsequent check-in is a fresh uncached response
+```
 
 ## Phase 7: Serverless Lambda Redirection
 
@@ -1094,3 +1244,7 @@ This is what **resilient red team infrastructure** looks like.
 8. **CGomezSec** - [Sliver C2 with Cloudflare Workers & Tunnels](https://cgomezsec.com/) - Practical guide to deploying Sliver behind Cloudflare infrastructure.
 9. **Microsoft** - [Dev Tunnels Documentation](https://learn.microsoft.com/en-us/azure/developer/dev-tunnels/) - Official documentation for Microsoft Dev Tunnels.
 10. **Ghostwriter** - [Infrastructure Management](https://www.ghostwriter.wiki/) - Red team engagement and infrastructure management platform.
+
+---
+- X: [@0XDbgMan](https://x.com/0XDbgMan)
+- Telegram: **dbgman**
